@@ -7,3 +7,4 @@ test('Подбор учитывает исключения, время, обор
 test('Несовместимые ограничения дают понятную ошибку',()=>{const s=initialState();s.settings.equipment=['Духовка'];assert.throws(()=>generate(s),/Нет подходящих/);});
 test('Низкий бюджет не подменяется и превышение остаётся видимым',()=>{const s=initialState();s.settings.budget=100;const p=generate(s,()=>.4);assert.ok(totals(s,p).purchase>s.settings.budget);assert.equal(s.settings.budget,100);assert.ok(p.flat().every(id=>recipeById[id]));});
 test('Цена из настроек используется в закупке',()=>{const s=initialState();s.plan=[['porridge',null,null]];s.prices.oats=123;assert.equal(shopping(s).find(p=>p.id==='oats').cost,123);});
+test('При ограниченном бюджете разрешаются повторы доступных блюд',()=>{const s=initialState();s.settings.budget=4500;const plan=generate(s,()=>.5);assert.ok(totals(s,plan).purchase<=4500);});

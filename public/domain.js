@@ -16,8 +16,13 @@ export function generate(state,random=Math.random){
  for(const m of state.settings.activeMeals)if(!pools[m].length)throw new Error('Нет подходящих рецептов для одного из приёмов пищи. Измените ограничения.');
  let best,score=Infinity;
  for(let attempt=0;attempt<250;attempt++){
-  const used={};const plan=Array.from({length:7},()=>[0,1,2].map(m=>{if(!state.settings.activeMeals.includes(m))return null;const pool=pools[m];const least=Math.min(...pool.map(r=>used[r.id]??0));const candidates=pool.filter(r=>(used[r.id]??0)===least);const r=candidates[Math.floor(random()*candidates.length)];used[r.id]=(used[r.id]??0)+1;return r.id;}));
-  const cost=totals(state,plan).purchase;const candidateScore=cost<=state.settings.budget?random()*100:100000+cost;
+  const used={};const plan=Array.from({length:7},()=>[0,1,2].map(m=>{if(!state.settings.activeMeals.includes(m))return null;const pool=pools[m];let r;
+   if(attempt===0){r=pool.reduce((a,b)=>recipeCost(state,a)<=recipeCost(state,b)?a:b);}
+   else if(attempt>100&&random()<.45){const sorted=[...pool].sort((a,b)=>recipeCost(state,a)-recipeCost(state,b));r=sorted[Math.floor(random()*Math.min(3,sorted.length))];}
+   else{const least=Math.min(...pool.map(r=>used[r.id]??0));const candidates=pool.filter(r=>(used[r.id]??0)===least);r=candidates[Math.floor(random()*candidates.length)];}
+   used[r.id]=(used[r.id]??0)+1;return r.id;}));
+  const cost=totals(state,plan).purchase;const repeats=Object.values(used).reduce((s,count)=>s+count*count,0);
+  const candidateScore=cost<=state.settings.budget?repeats*30+cost/state.settings.budget*10+random()*5:100000+cost;
   if(candidateScore<score){best=plan;score=candidateScore;}
  }
  return best;
