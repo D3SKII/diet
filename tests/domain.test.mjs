@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {initialState,shopping,totals,generate,available,recipeById} from '../public/domain.js';
+test('Закупка округляется до упаковок, ингредиенты считаются отдельно',()=>{const s=initialState();s.plan=[['porridge',null,null]];const oats=shopping(s).find(p=>p.id==='oats');assert.equal(oats.need,120);assert.equal(oats.packs,1);assert.equal(oats.cost,80);assert.ok(totals(s).purchase>totals(s).ingredients);});
+test('Домашние запасы вычитаются до округления упаковок',()=>{const s=initialState();s.plan=[['porridge',null,null]];s.pantry.oats=120;assert.equal(shopping(s).find(p=>p.id==='oats').cost,0);s.pantry.oats=119;assert.equal(shopping(s).find(p=>p.id==='oats').packs,1);});
+test('Подбор учитывает исключения, время, оборудование и приёмы пищи',()=>{const s=initialState();s.settings.excluded=['fish','milk'];s.settings.maxTime=30;s.settings.equipment=['Плита','Без техники'];s.settings.activeMeals=[0,2];const p=generate(s,()=>.5);assert.equal(p.length,7);for(const day of p){assert.equal(day[1],null);for(const m of [0,2])assert.ok(available(s,m).some(r=>r.id===day[m]));}});
+test('Несовместимые ограничения дают понятную ошибку',()=>{const s=initialState();s.settings.equipment=['Духовка'];assert.throws(()=>generate(s),/Нет подходящих/);});
+test('Низкий бюджет не подменяется и превышение остаётся видимым',()=>{const s=initialState();s.settings.budget=100;const p=generate(s,()=>.4);assert.ok(totals(s,p).purchase>s.settings.budget);assert.equal(s.settings.budget,100);assert.ok(p.flat().every(id=>recipeById[id]));});
+test('Цена из настроек используется в закупке',()=>{const s=initialState();s.plan=[['porridge',null,null]];s.prices.oats=123;assert.equal(shopping(s).find(p=>p.id==='oats').cost,123);});

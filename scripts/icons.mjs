@@ -1,0 +1,6 @@
+import {writeFile} from 'node:fs/promises';
+import {deflateSync} from 'node:zlib';
+// Простые иконки приложения, без внешних библиотек.
+function crc32(bytes){let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}return (crc^0xffffffff)>>>0;}
+function chunk(name,data){const tag=Buffer.from(name),length=Buffer.alloc(4),crc=Buffer.alloc(4);length.writeUInt32BE(data.length);crc.writeUInt32BE(crc32(Buffer.concat([tag,data])));return Buffer.concat([length,tag,data,crc]);}
+for(const size of [192,512]){const pixels=Buffer.alloc(size*(size*3+1));for(let y=0;y<size;y++)for(let x=0;x<size;x++){const dx=x-size/2,dy=y-size/2,r=Math.hypot(dx,dy)/size;let color=r<.28?[246,245,240]:[40,86,74];if(Math.abs(r-.185)<.015)color=[213,156,88];if((Math.abs(dx)<size*.023&&Math.abs(dy)<size*.15)||(Math.abs(dy)<size*.023&&Math.abs(dx)<size*.15))color=[40,86,74];const offset=y*(size*3+1)+1+x*3;pixels.set(color,offset);}const header=Buffer.alloc(13);header.writeUInt32BE(size);header.writeUInt32BE(size,4);header[8]=8;header[9]=2;const png=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(pixels)),chunk('IEND',Buffer.alloc(0))]);await writeFile(new URL(`../public/icon-${size}.png`,import.meta.url),png);}
